@@ -10743,16 +10743,28 @@ var $elm$core$Basics$never = function (_v0) {
 	}
 };
 var $elm$browser$Browser$element = _Browser_element;
+var $author$project$Hello$Init = {$: 'Init'};
+var $author$project$Hello$Model = F2(
+	function (input, userState) {
+		return {input: input, userState: userState};
+	});
 var $author$project$Hello$init = function (_v0) {
 	return _Utils_Tuple2(
-		{result: ''},
+		A2($author$project$Hello$Model, '', $author$project$Hello$Init),
 		$elm$core$Platform$Cmd$none);
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$Hello$GotRepo = function (a) {
-	return {$: 'GotRepo', a: a};
+var $author$project$Hello$Failed = function (a) {
+	return {$: 'Failed', a: a};
 };
+var $author$project$Hello$Loaded = function (a) {
+	return {$: 'Loaded', a: a};
+};
+var $author$project$Hello$Receive = function (a) {
+	return {$: 'Receive', a: a};
+};
+var $author$project$Hello$Waiting = {$: 'Waiting'};
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -10788,17 +10800,6 @@ var $elm$http$Http$expectStringResponse = F2(
 			$elm$core$Basics$identity,
 			A2($elm$core$Basics$composeR, toResult, toMsg));
 	});
-var $elm$http$Http$BadBody = function (a) {
-	return {$: 'BadBody', a: a};
-};
-var $elm$http$Http$BadStatus = function (a) {
-	return {$: 'BadStatus', a: a};
-};
-var $elm$http$Http$BadUrl = function (a) {
-	return {$: 'BadUrl', a: a};
-};
-var $elm$http$Http$NetworkError = {$: 'NetworkError'};
-var $elm$http$Http$Timeout = {$: 'Timeout'};
 var $elm$core$Result$mapError = F2(
 	function (f, result) {
 		if (result.$ === 'Ok') {
@@ -10810,6 +10811,17 @@ var $elm$core$Result$mapError = F2(
 				f(e));
 		}
 	});
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
 var $elm$http$Http$resolve = F2(
 	function (toResult, response) {
 		switch (response.$) {
@@ -10833,12 +10845,19 @@ var $elm$http$Http$resolve = F2(
 					toResult(body));
 		}
 	});
-var $elm$http$Http$expectString = function (toMsg) {
-	return A2(
-		$elm$http$Http$expectStringResponse,
-		toMsg,
-		$elm$http$Http$resolve($elm$core$Result$Ok));
-};
+var $elm$http$Http$expectJson = F2(
+	function (toMsg, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			$elm$http$Http$resolve(
+				function (string) {
+					return A2(
+						$elm$core$Result$mapError,
+						$elm$json$Json$Decode$errorToString,
+						A2($elm$json$Json$Decode$decodeString, decoder, string));
+				}));
+	});
 var $elm$http$Http$emptyBody = _Http_emptyBody;
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
@@ -10994,38 +11013,124 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
-var $elm$core$Debug$toString = _Debug_toString;
+var $author$project$Hello$User = F5(
+	function (login, avatarUrl, name, htmlUrl, bio) {
+		return {avatarUrl: avatarUrl, bio: bio, htmlUrl: htmlUrl, login: login, name: name};
+	});
+var $elm$json$Json$Decode$oneOf = _Json_oneOf;
+var $elm$json$Json$Decode$maybe = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
+				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+			]));
+};
+var $author$project$Hello$userDecoder = A6(
+	$elm$json$Json$Decode$map5,
+	$author$project$Hello$User,
+	A2($elm$json$Json$Decode$field, 'login', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'avatar_url', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'html_url', $elm$json$Json$Decode$string),
+	$elm$json$Json$Decode$maybe(
+		A2($elm$json$Json$Decode$field, 'avatar_url', $elm$json$Json$Decode$string)));
 var $author$project$Hello$update = F2(
 	function (msg, model) {
-		if (msg.$ === 'Click') {
-			return _Utils_Tuple2(
-				model,
-				$elm$http$Http$get(
-					{
-						expect: $elm$http$Http$expectString($author$project$Hello$GotRepo),
-						url: 'https:api.github.com/repos/elm/core'
-					}));
-		} else {
-			if (msg.a.$ === 'Ok') {
-				var repo = msg.a.a;
+		switch (msg.$) {
+			case 'Input':
+				var newInput = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{result: repo}),
+						{input: newInput}),
 					$elm$core$Platform$Cmd$none);
-			} else {
-				var error = msg.a.a;
+			case 'Send':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
+						{input: '', userState: $author$project$Hello$Waiting}),
+					$elm$http$Http$get(
 						{
-							result: $elm$core$Debug$toString(error)
-						}),
-					$elm$core$Platform$Cmd$none);
-			}
+							expect: A2($elm$http$Http$expectJson, $author$project$Hello$Receive, $author$project$Hello$userDecoder),
+							url: 'https://api.github.com/users/' + model.input
+						}));
+			default:
+				if (msg.a.$ === 'Ok') {
+					var user = msg.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								userState: $author$project$Hello$Loaded(user)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var e = msg.a.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								userState: $author$project$Hello$Failed(e)
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
 		}
 	});
-var $author$project$Hello$Click = {$: 'Click'};
+var $author$project$Hello$Input = function (a) {
+	return {$: 'Input', a: a};
+};
+var $author$project$Hello$Send = {$: 'Send'};
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$autofocus = $elm$html$Html$Attributes$boolProperty('autofocus');
+var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
+var $elm$html$Html$form = _VirtualDom_node('form');
+var $elm$html$Html$img = _VirtualDom_node('img');
+var $elm$html$Html$Events$alwaysPreventDefault = function (msg) {
+	return _Utils_Tuple2(msg, true);
+};
+var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
+	return {$: 'MayPreventDefault', a: a};
+};
+var $elm$html$Html$Events$preventDefaultOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
+	});
+var $elm$html$Html$Events$onSubmit = function (msg) {
+	return A2(
+		$elm$html$Html$Events$preventDefaultOn,
+		'submit',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysPreventDefault,
+			$elm$json$Json$Decode$succeed(msg)));
+};
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
+var $elm$html$Html$Attributes$src = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'src',
+		_VirtualDom_noJavaScriptOrHtmlUri(url));
+};
+var $elm$html$Html$Attributes$target = $elm$html$Html$Attributes$stringProperty('target');
+var $elm$core$Debug$toString = _Debug_toString;
+var $elm$core$String$trim = _String_trim;
+var $elm$html$Html$Attributes$width = function (n) {
+	return A2(
+		_VirtualDom_attribute,
+		'width',
+		$elm$core$String$fromInt(n));
+};
 var $author$project$Hello$view = function (model) {
 	return A2(
 		$elm$html$Html$div,
@@ -11033,22 +11138,97 @@ var $author$project$Hello$view = function (model) {
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$button,
+				$elm$html$Html$form,
 				_List_fromArray(
 					[
-						$elm$html$Html$Events$onClick($author$project$Hello$Click)
+						$elm$html$Html$Events$onSubmit($author$project$Hello$Send)
 					]),
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Get Repo')
+						A2(
+						$elm$html$Html$input,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onInput($author$project$Hello$Input),
+								$elm$html$Html$Attributes$autofocus(true),
+								$elm$html$Html$Attributes$placeholder('Github name'),
+								$elm$html$Html$Attributes$value(model.input)
+							]),
+						_List_Nil),
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$disabled(
+								_Utils_eq(model.userState, $author$project$Hello$Waiting) || $elm$core$String$isEmpty(
+									$elm$core$String$trim(model.input)))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Submit')
+							]))
 					])),
-				A2(
-				$elm$html$Html$p,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(model.result)
-					]))
+				function () {
+				var _v0 = model.userState;
+				switch (_v0.$) {
+					case 'Init':
+						return $elm$html$Html$text('');
+					case 'Waiting':
+						return $elm$html$Html$text('Waiting..');
+					case 'Loaded':
+						var user = _v0.a;
+						return A2(
+							$elm$html$Html$a,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$href(user.htmlUrl),
+									$elm$html$Html$Attributes$target('_blank')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$img,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$src(user.avatarUrl),
+											$elm$html$Html$Attributes$width(200)
+										]),
+									_List_Nil),
+									A2(
+									$elm$html$Html$div,
+									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$text(user.name)
+										])),
+									A2(
+									$elm$html$Html$div,
+									_List_Nil,
+									_List_fromArray(
+										[
+											function () {
+											var _v1 = user.bio;
+											if (_v1.$ === 'Just') {
+												var bio = _v1.a;
+												return $elm$html$Html$text(bio);
+											} else {
+												return $elm$html$Html$text('');
+											}
+										}()
+										]))
+								]));
+					default:
+						var error = _v0.a;
+						return A2(
+							$elm$html$Html$div,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text(
+									$elm$core$Debug$toString(error))
+								]));
+				}
+			}()
 			]));
 };
 var $author$project$Hello$main = $elm$browser$Browser$element(
@@ -11061,7 +11241,7 @@ var $author$project$Hello$main = $elm$browser$Browser$element(
 		view: $author$project$Hello$view
 	});
 _Platform_export({'Hello':{'init':$author$project$Hello$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Hello.Msg","aliases":{},"unions":{"Hello.Msg":{"args":[],"tags":{"Click":[],"GotRepo":["Result.Result Http.Error String.String"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Hello.Msg","aliases":{"Hello.User":{"args":[],"type":"{ login : String.String, avatarUrl : String.String, name : String.String, htmlUrl : String.String, bio : Maybe.Maybe String.String }"}},"unions":{"Hello.Msg":{"args":[],"tags":{"Input":["String.String"],"Send":[],"Receive":["Result.Result Http.Error Hello.User"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}}}}})}});}(this));
 
   var app = Elm.Hello.init({ node: document.getElementById("elm") });
 }
