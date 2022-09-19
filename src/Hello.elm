@@ -7,6 +7,8 @@ import Html.Events exposing (..)
 import Http
 import Json.Decode as D exposing (Decoder)
 import Set exposing (Set)
+import Task
+import Time
 
 
 type alias Message =
@@ -19,7 +21,7 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -28,22 +30,15 @@ main =
 
 
 type alias Model =
-    { input : String
-    , userState : UserState
+    { zone : Time.Zone
+    , time : Time.Posix
     }
-
-
-type UserState
-    = Init
-    | Waiting
-    | Loaded User
-    | Failed Http.Error
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Model "" Init
-    , Cmd.none
+    ( Model Time.utc (Time.millisToPosix 0)
+    , Task.perform AdjustTimeZone Time.here
     )
 
 
@@ -52,34 +47,20 @@ init _ =
 
 
 type Msg
-    = Input String
-    | Send
-    | Receive (Result Http.Error User)
+    = Tick Time.Posix
+    | AdjustTimeZone Time.Zone
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Input newInput ->
-            ( { model | input = newInput }
+        Tick newTime ->
+            ( { model | time = newTime }
             , Cmd.none
             )
 
-        Send ->
-            ( { model | input = "", userState = Waiting }
-            , Http.get
-                { url = "https://api.github.com/users/" ++ model.input
-                , expect = Http.expectJson Receive userDecoder
-                }
-            )
-
-        Receive (Ok user) ->
-            ( { model | userState = Loaded user }
-            , Cmd.none
-            )
-
-        Receive (Err e) ->
-            ( { model | userState = Failed e }
+        AdjustTimeZone newZone ->
+            ( { model | zone = newZone }
             , Cmd.none
             )
 
@@ -90,54 +71,17 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ Html.form [ onSubmit Send ]
-            [ input
-                [ onInput Input
-                , autofocus True
-                , placeholder "Github name"
-                , value model.input
-                ]
-                []
-            , button
-                [ disabled
-                    ((model.userState == Waiting)
-                        || String.isEmpty (String.trim model.input)
-                    )
-                ]
-                [ text "Submit" ]
-            ]
-        , case model.userState of
-            Init ->
-                text ""
+    let
+        hour =
+            String.fromInt (Time.toHour model.zone model.time)
 
-            Waiting ->
-                text "Waiting.."
+        minute =
+            String.fromInt (Time.toMinute model.zone model.time)
 
-            Loaded user ->
-                a
-                    [ href user.htmlUrl
-                    , target "_blank"
-                    ]
-                    [ img
-                        [ src user.avatarUrl
-                        , width 200
-                        ]
-                        []
-                    , div [] [ text user.name ]
-                    , div []
-                        [ case user.bio of
-                            Just bio ->
-                                text bio
-
-                            Nothing ->
-                                text ""
-                        ]
-                    ]
-
-            Failed error ->
-                div [] [ text (Debug.toString error) ]
-        ]
+        second =
+            String.fromInt (Time.toSecond model.zone model.time)
+    in
+    h1 [] [ text (hour ++ ":" ++ minute ++ ":" ++ second) ]
 
 
 
@@ -161,3 +105,12 @@ userDecoder =
         (D.field "name" D.string)
         (D.field "html_url" D.string)
         (D.maybe (D.field "avatar_url" D.string))
+
+
+
+--Subscriptions
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Time.every 1000 Tick
