@@ -4,12 +4,18 @@ import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Http
+import Set exposing (Set)
 
 
 main : Program () Model Msg
 main =
-    Browser.sandbox
-        { init = init, update = update, view = view }
+    Browser.element
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = \_ -> Sub.none
+        }
 
 
 
@@ -17,16 +23,15 @@ main =
 
 
 type alias Model =
-    { input : String
-    , memos : List String
+    { result : String
     }
 
 
-init : Model
-init =
-    { input = ""
-    , memos = []
-    }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { result = "" }
+    , Cmd.none
+    )
 
 
 
@@ -34,21 +39,24 @@ init =
 
 
 type Msg
-    = Input String
-    | Submit
+    = Click
+    | GotRepo (Result Http.Error String)
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Input input ->
-            { model | input = input }
+        Click ->
+            ( model
+            , Http.get
+                { url = "https:api.github.com/repos/elm/core", expect = Http.expectString GotRepo }
+            )
 
-        Submit ->
-            { model
-                | input = ""
-                , memos = model.input :: model.memos
-            }
+        GotRepo (Ok repo) ->
+            ( { model | result = repo }, Cmd.none )
+
+        GotRepo (Err error) ->
+            ( { model | result = Debug.toString error }, Cmd.none )
 
 
 
@@ -58,38 +66,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ Html.form [ onSubmit Submit ]
-            [ input [ value model.input, onInput Input ] []
-            , button
-                [ disabled (String.length model.input < 1) ]
-                [ text "Submit" ]
-            ]
-        , ul [] (List.map viewMemo model.memos)
+        [ button [ onClick Click ] [ text "Get Repo" ]
+        , p [] [ text model.result ]
         ]
 
-
-viewMemo : String -> Html msg
-viewMemo memo =
-    li [] [ text memo ]
-
-
-
---header : Html msg
---header =
---    h1 [] [ text "Useful Links" ]
---
---linkItem : String -> String -> Html msg
---linkItem url text_ =
---    li [] [ a [ href url ] [ text text_ ] ]
---
---
---
---
---content : Html msg
---content =
---    ul []
---        [ linkItem "https://elm-lang.org" "Homepage"
---        , linkItem "https://package.elm-lang.org" "Package"
---        , linkItem "https://ellie-app.com" "Playground"
---        , linkItem "https://ellie-app.com" "Playground"
---        ]
