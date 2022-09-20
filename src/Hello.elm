@@ -1,6 +1,7 @@
 module Hello exposing (..)
 
 import Browser
+import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -9,6 +10,7 @@ import Json.Decode as D exposing (Decoder)
 import Set exposing (Set)
 import Task
 import Time
+import Url
 
 
 type alias Message =
@@ -17,11 +19,13 @@ type alias Message =
 
 main : Program () Model Msg
 main =
-    Browser.element
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         }
 
 
@@ -30,16 +34,14 @@ main =
 
 
 type alias Model =
-    { zone : Time.Zone
-    , time : Time.Posix
+    { key : Nav.Key
+    , url : Url.Url
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( Model Time.utc (Time.millisToPosix 0)
-    , Task.perform AdjustTimeZone Time.here
-    )
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url key =
+    ( Model key url, Cmd.none )
 
 
 
@@ -47,41 +49,64 @@ init _ =
 
 
 type Msg
-    = Tick Time.Posix
-    | AdjustTimeZone Time.Zone
+    = LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Tick newTime ->
-            ( { model | time = newTime }
+        --画面遷移リクエスト
+        LinkClicked urlRequest ->
+            case urlRequest of
+                --内部リンクならブラウザのURLを更新
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                --外部リンクなら通常の画面遷移
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( { model | url = url }
+              --本来はサーバーからデータをもらう
             , Cmd.none
             )
 
-        AdjustTimeZone newZone ->
-            ( { model | zone = newZone }
-            , Cmd.none
-            )
+
+
+--Subscriptions
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
 
 
 
 --View
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    let
-        hour =
-            String.fromInt (Time.toHour model.zone model.time)
+    { title = "URL Interceptor"
+    , body =
+        [ text "The current URL is: "
+        , b [] [ text (Url.toString model.url) ]
+        , ul []
+            [ viewLink "/home"
+            , viewLink "/profile"
+            , viewLink "/reviews/the-century-of-the-self"
+            , viewLink "/reviews/public-option"
+            , viewLink "/reviews/shah-of-shahs"
+            ]
+        ]
+    }
 
-        minute =
-            String.fromInt (Time.toMinute model.zone model.time)
 
-        second =
-            String.fromInt (Time.toSecond model.zone model.time)
-    in
-    h1 [] [ text (hour ++ ":" ++ minute ++ ":" ++ second) ]
+viewLink : String -> Html msg
+viewLink path =
+    li [] [ a [ href path ] [ text path ] ]
 
 
 
@@ -105,12 +130,3 @@ userDecoder =
         (D.field "name" D.string)
         (D.field "html_url" D.string)
         (D.maybe (D.field "avatar_url" D.string))
-
-
-
---Subscriptions
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Time.every 1000 Tick
