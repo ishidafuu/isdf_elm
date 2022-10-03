@@ -1,8 +1,9 @@
 module Main exposing (main)
 
 import Browser
+import Css
+import Css.Global
 import Csv exposing (..)
-import Csv.Decode
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -166,3 +167,42 @@ viewTableLine data =
 viewTableData : String -> Html Msg
 viewTableData data =
     td [] [ text data ]
+
+
+
+-- STYLES
+
+
+css : List Css.Style
+css =
+    [ Css.displayFlex
+    , Css.flexDirection Css.column
+    , Css.alignItems Css.center
+    , Css.justifyContent Css.center
+    , Css.width <| Css.pct 100
+    , Css.height <| Css.px 400
+    , Css.Global.descendants
+        [ Css.Global.selector ".sticky-headers-table"
+            [ Css.width <| Css.pct 80
+            , Css.height <| Css.pct 80
+            , Css.border3 (Css.px 1) Css.solid
+            , Css.overflow Css.auto
+            ]
+        , Css.Global.selector ".sticky-headers-table__table"
+            [ Css.position Css.relative
+            , Css.width <| Css.pct 100
+            , Css.borderCollapse Css.collapse
+            ]
+        , Css.Global.selector ".sticky-headers-table__th"
+            [ Css.padding <| Css.rem 1
+            , Css.backgroundColor Colors.greyLighter
+            , Css.position Css.sticky
+            , Css.top Css.zero
+            , Css.zIndex <| Css.int 9999
+            ]
+        , Css.Global.selector ".sticky-headers-table__td"
+            [ Css.padding <| Css.rem 1
+            , Css.borderTop3 (Css.px 1) Css.solid Colors.greyLight
+            ]
+        ]
+    ]
