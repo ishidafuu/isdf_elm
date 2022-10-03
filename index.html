@@ -5348,7 +5348,7 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $periodic$elm_csv$Csv$Csv = F2(
+var $lovasoa$elm_csv$Csv$Csv = F2(
 	function (headers, records) {
 		return {headers: headers, records: records};
 	});
@@ -5359,7 +5359,7 @@ var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
 		{
 			allMasters: _List_Nil,
-			csv: A2($periodic$elm_csv$Csv$Csv, _List_Nil, _List_Nil),
+			csv: A2($lovasoa$elm_csv$Csv$Csv, _List_Nil, _List_Nil),
 			rawData: '',
 			title: '',
 			userState: $author$project$Main$Init
@@ -6158,6 +6158,165 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $elm$core$String$lines = _String_lines;
+var $elm$core$Basics$not = _Basics_not;
+var $elm$core$Basics$neq = _Utils_notEqual;
+var $elm$core$List$tail = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(xs);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $lovasoa$elm_csv$Helper$parseRemaining = F5(
+	function (separator, quoted, startOfLine, remaining, result) {
+		parseRemaining:
+		while (true) {
+			if (remaining === '') {
+				return result;
+			} else {
+				if ((separator !== '') && ((!quoted) && A2($elm$core$String$startsWith, separator, remaining))) {
+					var nextChars = A2(
+						$elm$core$String$dropLeft,
+						$elm$core$String$length(separator),
+						remaining);
+					var newResult = startOfLine ? _List_fromArray(
+						['', '']) : A2($elm$core$List$cons, '', result);
+					var newQuoted = false;
+					var $temp$separator = separator,
+						$temp$quoted = false,
+						$temp$startOfLine = false,
+						$temp$remaining = nextChars,
+						$temp$result = newResult;
+					separator = $temp$separator;
+					quoted = $temp$quoted;
+					startOfLine = $temp$startOfLine;
+					remaining = $temp$remaining;
+					result = $temp$result;
+					continue parseRemaining;
+				} else {
+					var others = A2(
+						$elm$core$Maybe$withDefault,
+						_List_Nil,
+						$elm$core$List$tail(result));
+					var nextNextChar = A3($elm$core$String$slice, 1, 2, remaining);
+					var nextChar = A3($elm$core$String$slice, 0, 1, remaining);
+					var isEscapedQuote = (!quoted) && (((nextChar === '\\') || (nextChar === '\"')) && (nextNextChar === '\"'));
+					var nextChars = A2(
+						$elm$core$String$dropLeft,
+						isEscapedQuote ? 2 : 1,
+						remaining);
+					var endQuote = quoted && ((nextChar === '\"') && (!isEscapedQuote));
+					var current = A2(
+						$elm$core$Maybe$withDefault,
+						'',
+						$elm$core$List$head(result));
+					var startQuote = (nextChar === '\"') && ((nextNextChar !== '\"') && (current === ''));
+					var newChar = isEscapedQuote ? '\"' : ((startQuote || endQuote) ? '' : nextChar);
+					var newDone = A2(
+						$elm$core$List$cons,
+						_Utils_ap(current, newChar),
+						others);
+					var newQuoted = (quoted && (!endQuote)) || startQuote;
+					var $temp$separator = separator,
+						$temp$quoted = newQuoted,
+						$temp$startOfLine = false,
+						$temp$remaining = nextChars,
+						$temp$result = newDone;
+					separator = $temp$separator;
+					quoted = $temp$quoted;
+					startOfLine = $temp$startOfLine;
+					remaining = $temp$remaining;
+					result = $temp$result;
+					continue parseRemaining;
+				}
+			}
+		}
+	});
+var $lovasoa$elm_csv$Helper$splitLineWith = F2(
+	function (separator, line) {
+		return $elm$core$List$reverse(
+			A5($lovasoa$elm_csv$Helper$parseRemaining, separator, false, true, line, _List_Nil));
+	});
+var $lovasoa$elm_csv$Csv$splitWith = F2(
+	function (separator, lines) {
+		var values = A2(
+			$elm$core$List$filter,
+			A2($elm$core$Basics$composeL, $elm$core$Basics$not, $elm$core$String$isEmpty),
+			$elm$core$String$lines(lines));
+		return A2(
+			$elm$core$List$map,
+			$lovasoa$elm_csv$Helper$splitLineWith(separator),
+			values);
+	});
+var $lovasoa$elm_csv$Csv$parseWith = F2(
+	function (separator, lines) {
+		var values = A2($lovasoa$elm_csv$Csv$splitWith, separator, lines);
+		var records = A2($elm$core$List$drop, 1, values);
+		var headers = A2(
+			$elm$core$Maybe$withDefault,
+			_List_Nil,
+			$elm$core$List$head(values));
+		return {headers: headers, records: records};
+	});
+var $lovasoa$elm_csv$Csv$parse = $lovasoa$elm_csv$Csv$parseWith(',');
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		if (msg.$ === 'Click') {
@@ -6166,7 +6325,7 @@ var $author$project$Main$update = F2(
 				_Utils_update(
 					model,
 					{
-						csv: A2($periodic$elm_csv$Csv$Csv, _List_Nil, _List_Nil),
+						csv: A2($lovasoa$elm_csv$Csv$Csv, _List_Nil, _List_Nil),
 						title: masterId,
 						userState: $author$project$Main$Waiting
 					}),
@@ -6181,7 +6340,11 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{rawData: rawData, userState: $author$project$Main$Loaded}),
+						{
+							csv: $lovasoa$elm_csv$Csv$parse(rawData),
+							rawData: rawData,
+							userState: $author$project$Main$Loaded
+						}),
 					$elm$core$Platform$Cmd$none);
 			} else {
 				var e = msg.a.a;
@@ -6242,6 +6405,33 @@ var $author$project$Main$viewMasterId = function (masterId) {
 			[
 				$elm$html$Html$text(masterId)
 			]));
+};
+var $elm$html$Html$table = _VirtualDom_node('table');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $author$project$Main$viewTableData = function (data) {
+	return A2(
+		$elm$html$Html$td,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$elm$html$Html$text(data)
+			]));
+};
+var $author$project$Main$viewTableLine = function (data) {
+	return A2(
+		$elm$html$Html$tr,
+		_List_Nil,
+		A2($elm$core$List$map, $author$project$Main$viewTableData, data));
+};
+var $author$project$Main$viewTable = function (csv) {
+	return A2(
+		$elm$html$Html$table,
+		_List_Nil,
+		A2(
+			$elm$core$List$cons,
+			$author$project$Main$viewTableLine(csv.headers),
+			A2($elm$core$List$map, $author$project$Main$viewTableLine, csv.records)));
 };
 var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$viewUserState = function (userState) {
@@ -6351,10 +6541,7 @@ var $author$project$Main$view = function (model) {
 						_List_Nil,
 						_List_fromArray(
 							[
-								A2(
-								$elm$html$Html$ul,
-								_List_Nil,
-								A2($elm$core$List$map, $author$project$Main$viewMasterId, model.allMasters))
+								$author$project$Main$viewTable(model.csv)
 							]))
 					]))
 			]));

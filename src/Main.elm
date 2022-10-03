@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Csv exposing (..)
+import Csv.Decode
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -76,14 +77,21 @@ update msg model =
             )
 
         GotCsv (Ok rawData) ->
-            ( { model | userState = Loaded, rawData = rawData }, Cmd.none )
+            ( { model
+                | userState = Loaded
+                , rawData = rawData
+                , csv = Csv.parse rawData
+              }
+            , Cmd.none
+            )
 
         GotCsv (Err e) ->
             ( { model | userState = Failed e }, Cmd.none )
 
 
-
--- SUBSCRIPTIONS
+parseCsv : String -> Csv
+parseCsv rawData =
+    Csv.parse rawData
 
 
 subscriptions : Model -> Sub Msg
@@ -117,7 +125,7 @@ view model =
                 [ viewUserState model.userState
                 ]
             , div []
-                [ ul [] (List.map viewMasterId model.allMasters)
+                [ viewTable model.csv
                 ]
             ]
         ]
@@ -144,6 +152,17 @@ viewUserState userState =
             text ("Failed" ++ Debug.toString e)
 
 
-viewData : String -> Html Msg
-viewData masterId =
-    li [] [ text masterId ]
+viewTable : Csv -> Html Msg
+viewTable csv =
+    table []
+        (viewTableLine csv.headers :: List.map viewTableLine csv.records)
+
+
+viewTableLine : List String -> Html Msg
+viewTableLine data =
+    tr [] (List.map viewTableData data)
+
+
+viewTableData : String -> Html Msg
+viewTableData data =
+    td [] [ text data ]
