@@ -5,6 +5,7 @@ import Csv exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Http
 
 
 main : Program () Model Msg
@@ -23,7 +24,12 @@ main =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { title = "", csv = Csv [] [] }
+    ( { allMasters = []
+      , title = ""
+      , csv = Csv [] []
+      , userState = Init
+      , rawData = ""
+      }
     , Cmd.none
     )
 
@@ -32,9 +38,19 @@ init _ =
 -- MODEL
 
 
+type UserState
+    = Init
+    | Waiting
+    | Loaded
+    | Failed Http.Error
+
+
 type alias Model =
-    { title : String
+    { allMasters : List String
+    , title : String
+    , rawData : String
     , csv : Csv
+    , userState : UserState
     }
 
 
@@ -48,17 +64,22 @@ type alias Topic =
 
 type Msg
     = Click String
-    | SetCsv Csv
+    | GotCsv (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Click masterId ->
-            ( {}, Cmd.none )
+            ( { model | title = masterId, csv = Csv [] [], userState = Waiting }
+            , Http.get { url = "https://mscs.konicaminolta.jp/hc/article_attachments/4406428328857/AIsee_______________________.csv", expect = Http.expectString GotCsv }
+            )
 
-        SetCsv csv ->
-            ( { model | csv = csv }, Cmd.none )
+        GotCsv (Ok rawData) ->
+            ( { model | userState = Loaded, rawData = rawData }, Cmd.none )
+
+        GotCsv (Err e) ->
+            ( { model | userState = Failed e }, Cmd.none )
 
 
 
@@ -78,20 +99,51 @@ view : Model -> Html Msg
 view model =
     div []
         [ div [ id "left-column" ]
-            [ h1 [] [ text "Elmtalk" ]
+            [ h1 [] [ text "master_list" ]
+            , span [] [ text model.title ]
+            , button [ onClick (Click model.title) ] [ text ("Load" ++ model.title) ]
             , nav []
-                [ div [ class "debug" ]
-                    [ span [] [ text model.message ]
-                    , button [ onClick (SayHello "世界樹") ] [ text "hello" ]
-                    , button [ onClick SayBye ] [ text "bye" ]
+                [ div [ class "master_list" ]
+                    [ ul [] (List.map viewMasterId model.allMasters)
                     ]
-                , div [] (List.map topicListItem model.topics)
                 ]
             ]
-        , div [ id "right-column" ] [ text "..." ]
+        , div [ id "right-column" ]
+            [ h1 [] [ text "masters" ]
+            , div []
+                [ text model.rawData
+                ]
+            , div []
+                [ viewUserState model.userState
+                ]
+            , div []
+                [ ul [] (List.map viewMasterId model.allMasters)
+                ]
+            ]
         ]
 
 
-topicListItem : Topic -> Html Msg
-topicListItem topic =
-    div [ class "topic" ] [ text topic.name ]
+viewMasterId : String -> Html Msg
+viewMasterId masterId =
+    li [] [ text masterId ]
+
+
+viewUserState : UserState -> Html Msg
+viewUserState userState =
+    case userState of
+        Init ->
+            text "Init"
+
+        Waiting ->
+            text "Init"
+
+        Loaded ->
+            text "Loaded"
+
+        Failed e ->
+            text ("Failed" ++ Debug.toString e)
+
+
+viewData : String -> Html Msg
+viewData masterId =
+    li [] [ text masterId ]
